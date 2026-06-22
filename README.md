@@ -125,7 +125,12 @@ src/components/                # sidebar + shadcn-style UI
 
 ## Notes / limits
 
-- Supported uploads: **PDF, TXT, MD**, up to 10 MB.
+- Supported uploads: **PDF, TXT, MD**, up to 10 MB. Multiple files can be uploaded at
+  once; duplicates (same extracted text) are de-duplicated per user via a sha256
+  `content_hash`.
+- If upgrading an existing database, re-run `npm run db:init` to apply
+  `migrations/002_dedupe.sql` (adds the `content_hash` column + unique index). All
+  migrations are idempotent.
 - Embedding dimension is fixed to **1536** (`text-embedding-3-small`). Changing the model
   means changing the `vector(1536)` column.
 - This is a focused demo; for production you'd add background processing for large files,

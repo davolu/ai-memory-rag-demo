@@ -30,8 +30,9 @@ type Pending = {
   id: string;
   name: string;
   size: number;
-  status: "uploading" | "error";
+  status: "uploading" | "error" | "duplicate";
   error?: string;
+  note?: string;
 };
 
 function formatBytes(bytes: number) {
@@ -76,6 +77,17 @@ export default function DocumentsPage() {
             p.map((x) =>
               x.id === pid
                 ? { ...x, status: "error", error: data.error || "Upload failed." }
+                : x
+            )
+          );
+          return;
+        }
+        if (data.duplicate) {
+          // Already in the library — keep a dismissible "already uploaded" note.
+          setPending((p) =>
+            p.map((x) =>
+              x.id === pid
+                ? { ...x, status: "duplicate", note: data.message || "Already uploaded." }
                 : x
             )
           );
@@ -201,8 +213,11 @@ export default function DocumentsPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{p.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatBytes(p.size)}
-                      {p.status === "error" && p.error ? ` · ${p.error}` : ""}
+                      {p.status === "duplicate"
+                        ? p.note
+                        : `${formatBytes(p.size)}${
+                            p.status === "error" && p.error ? ` · ${p.error}` : ""
+                          }`}
                     </p>
                   </div>
                 </div>
@@ -212,9 +227,13 @@ export default function DocumentsPage() {
                   </Badge>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Badge variant="destructive">
-                      <AlertCircle className="mr-1 h-3 w-3" /> Failed
-                    </Badge>
+                    {p.status === "duplicate" ? (
+                      <Badge variant="default">Already uploaded</Badge>
+                    ) : (
+                      <Badge variant="destructive">
+                        <AlertCircle className="mr-1 h-3 w-3" /> Failed
+                      </Badge>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
