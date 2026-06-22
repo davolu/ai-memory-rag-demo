@@ -149,12 +149,26 @@ export async function POST(req: Request) {
     const answer =
       completion.choices[0]?.message?.content?.trim() || NO_ANSWER;
 
-    const sources: Source[] = relevant.map((m) => ({
-      documentId: m.document_id,
-      filename: m.filename,
-      snippet: m.content.length > 400 ? m.content.slice(0, 400) + "…" : m.content,
-      score: Math.round(Number(m.score) * 1000) / 1000,
-    }));
+    // Dedupe the DISPLAYED sources by document — keep one entry per document,
+    // using that document's highest-scoring chunk (and its snippet). The LLM
+    // still receives every retrieved chunk above; this only affects display.
+    const bestByDoc = new Map<string, Source>();
+    for (const m of relevant) {
+      const score = Math.round(Number(m.score) * 1000) / 1000;
+      const existing = bestByDoc.get(m.document_id);
+      if (!existing || score > existing.score) {
+        bestByDoc.set(m.document_id, {
+          documentId: m.document_id,
+          filename: m.filename,
+          snippet:
+            m.content.length > 400 ? m.content.slice(0, 400) + "…" : m.content,
+          score,
+        });
+      }
+    }
+    const sources: Source[] = Array.from(bestByDoc.values()).sort(
+      (a, b) => b.score - a.score
+    );
 
     const saved = await query(
       `INSERT INTO chat_messages (user_id, role, content, sources)

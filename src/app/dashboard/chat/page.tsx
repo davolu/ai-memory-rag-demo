@@ -8,6 +8,7 @@ import {
   Trash2,
   MessageSquareText,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,12 +229,40 @@ function MessageBubble({ message }: { message: Message }) {
           <Markdown>{message.content}</Markdown>
         </div>
 
-        {sources.length > 0 && (
-          <div className="mt-3.5 space-y-2">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <FileText className="h-3 w-3" />
-              {sources.length} source{sources.length > 1 ? "s" : ""}
-            </p>
+        {sources.length > 0 && <SourcesSection sources={sources} />}
+      </div>
+    </div>
+  );
+}
+
+function SourcesSection({ sources }: { sources: Source[] }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded-lg px-1 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <FileText className="h-3 w-3" />
+        {sources.length} source{sources.length > 1 ? "s" : ""}
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform duration-300 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {/* grid-rows trick: animates max height smoothly without fixed pixel values */}
+      <div
+        className={`grid transition-all duration-300 ease-out ${
+          open ? "mt-2 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-2">
             {sources.map((s, i) => (
               <div
                 key={i}
@@ -254,7 +283,7 @@ function MessageBubble({ message }: { message: Message }) {
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
