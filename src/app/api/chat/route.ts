@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
-import { query, toVectorLiteral } from "@/lib/db";
+import { query, toVectorLiteral, vectorSearch } from "@/lib/db";
 import { embedQuery, getOpenAI, CHAT_MODEL } from "@/lib/openai";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const TOP_K = 6;
-const MIN_SCORE = 0.18; // cosine similarity floor — below this we treat as "not relevant"
+const TOP_K = 8;
+// Cosine-similarity floor. text-embedding-3-small puts genuinely relevant
+// (often paraphrased) passages around 0.1–0.45, so 0.18 was dropping good
+// chunks. 0.1 keeps real matches while still excluding unrelated noise.
+const MIN_SCORE = 0.1;
 const NO_ANSWER =
   "I couldn't find anything about that in your documents. Try uploading a relevant file, or rephrasing your question.";
 
@@ -62,8 +65,11 @@ export async function POST(req: Request) {
     const queryEmbedding = await embedQuery(question);
 
     // 2) Cosine-similarity search over THIS user's chunks.
-    //    `<=>` is cosine distance; similarity = 1 - distance.
-    const { rows: matches } = await query<{
+    //    `<=>` is cosine DISTANCE (0 = identical, 2 = opposite), so cosine
+    //    SIMILARITY = 1 - distance. We ORDER BY distance ascending (closest
+    //    first) and convert to similarity for the score. Uses vectorSearch so
+    //    ivfflat.probes is raised for reliable recall on small corpora.
+    const matches = await vectorSearch<{
       document_id: string;
       filename: string;
       content: string;
@@ -79,6 +85,17 @@ export async function POST(req: Request) {
         ORDER BY c.embedding <=> $1::vector
         LIMIT $3`,
       [toVectorLiteral(queryEmbedding), userId, TOP_K]
+    );
+
+    // Sanity log so we can confirm retrieval is actually working.
+    console.log(
+      `[chat] q="${question.slice(0, 80)}" retrieved=${matches.length} scores=` +
+        JSON.stringify(
+          matches.map((m) => ({
+            file: m.filename,
+            score: Math.round(Number(m.score) * 1000) / 1000,
+          }))
+        )
     );
 
     const relevant = matches.filter((m) => Number(m.score) >= MIN_SCORE);
@@ -105,18 +122,26 @@ export async function POST(req: Request) {
     const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: CHAT_MODEL,
-      temperature: 0.2,
+      temperature: 0.3,
       messages: [
         {
           role: "system",
-          content:
-            "You are a precise knowledge-retrieval assistant. Answer the user's question using ONLY the provided sources. " +
-            "If the sources do not contain the answer, say you couldn't find it in the documents — do NOT use outside knowledge or guess. " +
-            "Cite the sources you used inline like [Source 1], [Source 2]. Be concise and factual.",
+          content: [
+            "You are a knowledgeable research assistant answering questions about the user's own documents.",
+            "Use the provided sources as your ground truth. Answer thoroughly and specifically:",
+            "- Synthesize information ACROSS the different sources into one coherent answer; don't just quote one.",
+            "- Pull out concrete details, names, numbers, and steps that appear in the sources.",
+            "- Where useful, add brief insight or structure (short paragraphs or bullet points) that helps the user understand the material.",
+            "- Cite the documents you draw from by name and their [Source N] tag, e.g. (\"report.pdf\" [Source 2]).",
+            "Only say you can't find the answer if the sources are genuinely unrelated to the question. If they are even partially relevant, give the best grounded answer you can and note any gaps. Do not invent facts that aren't supported by the sources.",
+          ].join("\n"),
         },
         {
           role: "user",
-          content: `Sources:\n\n${context}\n\n---\n\nQuestion: ${question}`,
+          content:
+            `Here are the most relevant passages retrieved from my documents.\n\n` +
+            `${context}\n\n---\n\nQuestion: ${question}\n\n` +
+            `Answer using the sources above, citing them by name and [Source N].`,
         },
       ],
     });

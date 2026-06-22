@@ -25,6 +25,15 @@ type Doc = {
   created_at: string;
 };
 
+// An in-flight upload tracked per file before it lands in the documents list.
+type Pending = {
+  id: string;
+  name: string;
+  size: number;
+  status: "uploading" | "error";
+  error?: string;
+};
+
 function formatBytes(bytes: number) {
   if (!bytes) return "0 B";
   const units = ["B", "KB", "MB", "GB"];
@@ -32,12 +41,13 @@ function formatBytes(bytes: number) {
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+let pendingCounter = 0;
+
 export default function DocumentsPage() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [pending, setPending] = useState<Pending[]>([]);
   const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -53,36 +63,66 @@ export default function DocumentsPage() {
     load();
   }, [load]);
 
-  const upload = useCallback(
-    async (file: File) => {
-      setError(null);
-      setUploading(true);
+  // Upload a single file, tracking its own status by pending id.
+  const uploadOne = useCallback(
+    async (file: File, pid: string) => {
       const fd = new FormData();
       fd.append("file", file);
       try {
         const res = await fetch("/api/documents", { method: "POST", body: fd });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setError(data.error || "Upload failed.");
+          setPending((p) =>
+            p.map((x) =>
+              x.id === pid
+                ? { ...x, status: "error", error: data.error || "Upload failed." }
+                : x
+            )
+          );
+          return;
         }
+        // Success: the doc now exists server-side; drop the pending chip.
+        setPending((p) => p.filter((x) => x.id !== pid));
       } catch {
-        setError("Upload failed. Please try again.");
-      } finally {
-        setUploading(false);
-        load();
+        setPending((p) =>
+          p.map((x) =>
+            x.id === pid ? { ...x, status: "error", error: "Upload failed." } : x
+          )
+        );
       }
     },
-    [load]
+    []
+  );
+
+  // Accept many files at once; process them in parallel without blocking the UI.
+  const uploadMany = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+      const entries: Pending[] = files.map((f) => ({
+        id: `p${pendingCounter++}`,
+        name: f.name,
+        size: f.size,
+        status: "uploading",
+      }));
+      setPending((p) => [...entries, ...p]);
+
+      await Promise.allSettled(
+        files.map((file, i) => uploadOne(file, entries[i].id))
+      );
+      // Refresh the persisted list once all requests have settled.
+      load();
+    },
+    [uploadOne, load]
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragOver(false);
-      const file = e.dataTransfer.files?.[0];
-      if (file) upload(file);
+      const files = Array.from(e.dataTransfer.files || []);
+      if (files.length) uploadMany(files);
     },
-    [upload]
+    [uploadMany]
   );
 
   async function remove(id: string) {
@@ -91,13 +131,15 @@ export default function DocumentsPage() {
     load();
   }
 
+  const uploadingCount = pending.filter((p) => p.status === "uploading").length;
+
   return (
     <div className="flex h-full flex-col">
       <header className="border-b px-8 py-5">
         <h1 className="text-xl font-semibold">Documents</h1>
         <p className="text-sm text-muted-foreground">
-          Upload PDFs, text, or Markdown. We chunk, embed, and store them in your private
-          vector store.
+          Upload PDFs, text, or Markdown — one or many at once. We chunk, embed, and store
+          them in your private vector store.
         </p>
       </header>
 
@@ -120,34 +162,74 @@ export default function DocumentsPage() {
           <input
             ref={inputRef}
             type="file"
+            multiple
             accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown"
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) upload(file);
+              const files = Array.from(e.target.files || []);
+              if (files.length) uploadMany(files);
               e.target.value = "";
             }}
           />
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-            {uploading ? (
+            {uploadingCount > 0 ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
               <FileUp className="h-6 w-6" />
             )}
           </div>
           <p className="font-medium">
-            {uploading ? "Processing your document…" : "Drag & drop a file, or click to browse"}
+            {uploadingCount > 0
+              ? `Processing ${uploadingCount} file${uploadingCount > 1 ? "s" : ""}…`
+              : "Drag & drop files, or click to browse"}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            PDF, TXT, or MD · up to 10 MB
+            PDF, TXT, or MD · up to 10 MB each · multiple files supported
           </p>
         </div>
 
-        {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4" />
-            {error}
-          </div>
+        {/* Per-file upload progress / errors */}
+        {pending.length > 0 && (
+          <ul className="mt-4 space-y-2">
+            {pending.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center justify-between gap-4 rounded-lg border bg-card px-4 py-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBytes(p.size)}
+                      {p.status === "error" && p.error ? ` · ${p.error}` : ""}
+                    </p>
+                  </div>
+                </div>
+                {p.status === "uploading" ? (
+                  <Badge variant="warning">
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Uploading
+                  </Badge>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive">
+                      <AlertCircle className="mr-1 h-3 w-3" /> Failed
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Dismiss"
+                      onClick={() =>
+                        setPending((arr) => arr.filter((x) => x.id !== p.id))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
 
         {/* List */}
@@ -173,7 +255,7 @@ export default function DocumentsPage() {
               <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               <p className="font-medium">No documents yet</p>
               <p className="text-sm text-muted-foreground">
-                Upload your first file to start building your knowledge base.
+                Upload your first files to start building your knowledge base.
               </p>
             </div>
           ) : (

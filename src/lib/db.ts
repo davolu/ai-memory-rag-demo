@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 
 // A single shared pool across hot reloads / serverless invocations.
 const globalForPg = globalThis as unknown as { pgPool?: Pool };
@@ -37,4 +37,29 @@ export async function query<T = any>(
 // pgvector expects a literal like '[0.1,0.2,...]'
 export function toVectorLiteral(embedding: number[]): string {
   return `[${embedding.join(",")}]`;
+}
+
+// Run a cosine similarity search with a raised ivfflat.probes for good recall.
+// The default probes=1 only scans a single list of the ivfflat index, which on
+// small corpora frequently misses the true nearest neighbours. SET LOCAL inside
+// a transaction scopes the setting to this query only.
+export async function vectorSearch<T = any>(
+  sql: string,
+  params: any[],
+  probes = 10
+): Promise<T[]> {
+  const pool = getPool();
+  const client: PoolClient = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`SET LOCAL ivfflat.probes = ${Math.max(1, Math.floor(probes))}`);
+    const res = await client.query(sql, params);
+    await client.query("COMMIT");
+    return res.rows as T[];
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
