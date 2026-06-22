@@ -149,26 +149,54 @@ export async function POST(req: Request) {
     const answer =
       completion.choices[0]?.message?.content?.trim() || NO_ANSWER;
 
-    // Dedupe the DISPLAYED sources by document — keep one entry per document,
-    // using that document's highest-scoring chunk (and its snippet). The LLM
-    // still receives every retrieved chunk above; this only affects display.
-    const bestByDoc = new Map<string, Source>();
-    for (const m of relevant) {
-      const score = Math.round(Number(m.score) * 1000) / 1000;
-      const existing = bestByDoc.get(m.document_id);
-      if (!existing || score > existing.score) {
-        bestByDoc.set(m.document_id, {
-          documentId: m.document_id,
-          filename: m.filename,
-          snippet:
-            m.content.length > 400 ? m.content.slice(0, 400) + "…" : m.content,
-          score,
-        });
+    // Decide which retrieved chunks to DISPLAY as sources. The LLM still saw
+    // every retrieved chunk above ([Source 1..N], where N maps to relevant[N-1]);
+    // this only affects the dropdown.
+    //
+    // Primary: parse the [Source N] markers the model actually cited and show
+    // only those — guaranteeing displayed sources = what the answer relied on.
+    // Fallback (model emitted no markers): show top sources by score, keeping
+    // only those within 70% of the top score, capped at 3, to drop weak tail.
+    const dedupeByDoc = (rows: typeof relevant): Source[] => {
+      const bestByDoc = new Map<string, Source>();
+      for (const m of rows) {
+        const score = Math.round(Number(m.score) * 1000) / 1000;
+        const existing = bestByDoc.get(m.document_id);
+        if (!existing || score > existing.score) {
+          bestByDoc.set(m.document_id, {
+            documentId: m.document_id,
+            filename: m.filename,
+            snippet:
+              m.content.length > 400 ? m.content.slice(0, 400) + "…" : m.content,
+            score,
+          });
+        }
       }
+      return Array.from(bestByDoc.values()).sort((a, b) => b.score - a.score);
+    };
+
+    const citedIndices = new Set<number>();
+    const markers = answer.match(/\[\s*source\s+\d+\s*\]/gi) || [];
+    for (const marker of markers) {
+      const digits = marker.match(/\d+/);
+      if (!digits) continue;
+      const n = parseInt(digits[0], 10);
+      if (n >= 1 && n <= relevant.length) citedIndices.add(n);
     }
-    const sources: Source[] = Array.from(bestByDoc.values()).sort(
-      (a, b) => b.score - a.score
-    );
+
+    let sources: Source[];
+    if (citedIndices.size > 0) {
+      const citedChunks = Array.from(citedIndices)
+        .sort((a, b) => a - b)
+        .map((n) => relevant[n - 1]);
+      sources = dedupeByDoc(citedChunks);
+    } else {
+      const all = dedupeByDoc(relevant);
+      const topScore = all.length > 0 ? all[0].score : 0;
+      sources = all
+        .filter((s) => s.score >= topScore * 0.7)
+        .slice(0, 3);
+    }
 
     const saved = await query(
       `INSERT INTO chat_messages (user_id, role, content, sources)
