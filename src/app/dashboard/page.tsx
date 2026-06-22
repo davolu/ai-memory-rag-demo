@@ -147,15 +147,15 @@ export default function DocumentsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b px-8 py-5">
-        <h1 className="text-xl font-semibold">Documents</h1>
-        <p className="text-sm text-muted-foreground">
+      <header className="sticky top-0 z-10 border-b bg-background/80 px-8 py-5 backdrop-blur">
+        <h1 className="text-2xl font-bold tracking-tight">Documents</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
           Upload PDFs, text, or Markdown — one or many at once. We chunk, embed, and store
           them in your private vector store.
         </p>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-8 py-7">
         {/* Dropzone */}
         <div
           onDragOver={(e) => {
@@ -165,10 +165,10 @@ export default function DocumentsPage() {
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
           onClick={() => inputRef.current?.click()}
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+          className={`group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-12 text-center transition-all duration-300 ${
             dragOver
-              ? "border-primary bg-primary/5"
-              : "border-border hover:border-primary/50 hover:bg-accent/40"
+              ? "scale-[1.01] border-primary bg-primary/5 shadow-soft"
+              : "border-border bg-card/40 hover:border-primary/50 hover:bg-accent/40"
           }`}
         >
           <input
@@ -183,19 +183,19 @@ export default function DocumentsPage() {
               e.target.value = "";
             }}
           />
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-all duration-300 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground">
             {uploadingCount > 0 ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
               <FileUp className="h-6 w-6" />
             )}
           </div>
-          <p className="font-medium">
+          <p className="text-[15px] font-semibold tracking-tight">
             {uploadingCount > 0
               ? `Processing ${uploadingCount} file${uploadingCount > 1 ? "s" : ""}…`
               : "Drag & drop files, or click to browse"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1.5 text-sm text-muted-foreground">
             PDF, TXT, or MD · up to 10 MB each · multiple files supported
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function DocumentsPage() {
             {pending.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-4 rounded-lg border bg-card px-4 py-3"
+                className="flex animate-fade-in-up items-center justify-between gap-4 rounded-xl border bg-card px-4 py-3 shadow-soft"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -270,22 +270,24 @@ export default function DocumentsPage() {
               ))}
             </div>
           ) : docs.length === 0 ? (
-            <div className="rounded-xl border border-dashed py-12 text-center">
-              <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-              <p className="font-medium">No documents yet</p>
-              <p className="text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed bg-card/40 py-14 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <FileText className="h-6 w-6" />
+              </div>
+              <p className="font-semibold tracking-tight">No documents yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Upload your first files to start building your knowledge base.
               </p>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {docs.map((doc) => (
                 <li
                   key={doc.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border bg-card p-4"
+                  className="flex items-center justify-between gap-4 rounded-2xl border bg-card p-4 shadow-soft transition-all duration-200 hover:border-primary/30 hover:shadow-soft-lg"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <FileText className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">

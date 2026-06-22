@@ -107,10 +107,10 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b px-8 py-5">
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/80 px-8 py-5 backdrop-blur">
         <div>
-          <h1 className="text-xl font-semibold">Chat</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">Chat</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Ask questions — answers are grounded only in your documents, with sources.
           </p>
         </div>
@@ -122,8 +122,8 @@ export default function ChatPage() {
         )}
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="mx-auto max-w-3xl space-y-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-7">
+        <div className="mx-auto max-w-3xl space-y-7">
           {loadingHistory ? (
             <div className="flex justify-center pt-10 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -138,15 +138,24 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="border-t px-8 py-4">
-        <form onSubmit={send} className="mx-auto flex max-w-3xl items-center gap-2">
+      <div className="border-t bg-background/80 px-8 py-4 backdrop-blur">
+        <form
+          onSubmit={send}
+          className="mx-auto flex max-w-3xl items-center gap-2 rounded-2xl border bg-card p-1.5 shadow-soft transition-all focus-within:border-primary/40 focus-within:shadow-soft-lg"
+        >
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question about your documents…"
             disabled={sending}
+            className="border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
-          <Button type="submit" disabled={sending || !input.trim()}>
+          <Button
+            type="submit"
+            size="icon"
+            className="shrink-0"
+            disabled={sending || !input.trim()}
+          >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -154,6 +163,9 @@ export default function ChatPage() {
             )}
           </Button>
         </form>
+        <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] text-muted-foreground/70">
+          Recall only answers from your uploaded documents.
+        </p>
       </div>
     </div>
   );
@@ -161,16 +173,16 @@ export default function ChatPage() {
 
 function Thinking() {
   return (
-    <div className="flex gap-3">
-      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Sparkles className="h-4 w-4" />
+    <div className="flex animate-fade-in-up gap-3.5">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-violet-500 text-primary-foreground shadow-sm">
+        <Sparkles className="h-4 w-4 animate-pulse" />
       </div>
-      <div className="flex items-center gap-2 rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 rounded-2xl rounded-tl-md border bg-card px-4 py-3 text-sm text-muted-foreground shadow-soft">
         <span>Thinking</span>
         <span className="flex gap-1">
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.3s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.15s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/70 [animation-delay:-0.3s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/70 [animation-delay:-0.15s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/70" />
         </span>
       </div>
     </div>
@@ -179,12 +191,12 @@ function Thinking() {
 
 function EmptyState() {
   return (
-    <div className="rounded-xl border border-dashed py-16 text-center">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <MessageSquareText className="h-6 w-6" />
+    <div className="rounded-2xl border border-dashed bg-card/40 py-20 text-center">
+      <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-violet-500 text-primary-foreground shadow-soft-lg">
+        <MessageSquareText className="h-7 w-7" />
       </div>
-      <p className="font-medium">Ask your knowledge base anything</p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+      <p className="text-lg font-semibold tracking-tight">Ask your knowledge base anything</p>
+      <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
         Upload documents first, then ask a question. Every answer cites the exact passages
         it used — and if nothing matches, it&apos;ll tell you instead of guessing.
       </p>
@@ -198,8 +210,8 @@ function MessageBubble({ message }: { message: Message }) {
 
   if (isUser) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+      <div className="flex animate-fade-in-up justify-end">
+        <div className="max-w-[80%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm leading-relaxed text-primary-foreground shadow-sm shadow-primary/20">
           {message.content}
         </div>
       </div>
@@ -207,28 +219,34 @@ function MessageBubble({ message }: { message: Message }) {
   }
 
   return (
-    <div className="flex gap-3">
-      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+    <div className="flex animate-fade-in-up gap-3.5">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-violet-500 text-primary-foreground shadow-sm">
         <Sparkles className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm leading-relaxed">
+        <div className="rounded-2xl rounded-tl-md border bg-card px-4 py-3 text-sm leading-relaxed shadow-soft">
           <Markdown>{message.content}</Markdown>
         </div>
 
         {sources.length > 0 && (
-          <div className="mt-3 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Sources
+          <div className="mt-3.5 space-y-2">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <FileText className="h-3 w-3" />
+              {sources.length} source{sources.length > 1 ? "s" : ""}
             </p>
             {sources.map((s, i) => (
-              <div key={i} className="rounded-lg border bg-card/60 p-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2 text-xs font-medium">
-                    <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <div
+                key={i}
+                className="rounded-xl border bg-card/70 p-3.5 transition-colors hover:border-primary/30 hover:bg-card"
+              >
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2 text-xs font-semibold">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <FileText className="h-3 w-3" />
+                    </span>
                     <span className="truncate">{s.filename}</span>
                   </div>
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                     {(s.score * 100).toFixed(0)}% match
                   </span>
                 </div>

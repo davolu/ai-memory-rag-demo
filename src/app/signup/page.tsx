@@ -53,18 +53,23 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-semibold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-12">
+      <div className="pointer-events-none absolute inset-0 bg-grid opacity-60 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+      <div className="pointer-events-none absolute -top-32 left-1/2 h-[420px] w-[620px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      <div className="relative w-full max-w-sm">
+        <Link
+          href="/"
+          className="mb-8 flex items-center justify-center gap-2.5 font-semibold tracking-tight"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/30">
             <Brain className="h-5 w-5" />
           </span>
           Recall
         </Link>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h1 className="text-xl font-semibold">Create your account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="rounded-2xl border bg-card p-7 shadow-soft-lg">
+          <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
             Start building your private knowledge base.
           </p>
 
