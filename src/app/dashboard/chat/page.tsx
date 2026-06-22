@@ -108,9 +108,9 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/80 px-8 py-5 backdrop-blur">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Chat</h1>
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-background/80 px-4 py-5 backdrop-blur sm:px-8">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Chat</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Ask questions — answers are grounded only in your documents, with sources.
           </p>
@@ -123,7 +123,7 @@ export default function ChatPage() {
         )}
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-7">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-7">
         <div className="mx-auto max-w-3xl space-y-7">
           {loadingHistory ? (
             <div className="flex justify-center pt-10 text-muted-foreground">
@@ -139,7 +139,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="border-t bg-background/80 px-8 py-4 backdrop-blur">
+      <div className="border-t bg-background/80 px-4 py-4 backdrop-blur sm:px-8">
         <form
           onSubmit={send}
           className="mx-auto flex max-w-3xl items-center gap-2 rounded-2xl border bg-card p-1.5 shadow-soft transition-all focus-within:border-primary/40 focus-within:shadow-soft-lg"

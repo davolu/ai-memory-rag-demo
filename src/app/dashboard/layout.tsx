@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
-import { Sidebar } from "@/components/sidebar";
+import { DashboardShell } from "@/components/sidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +15,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar user={{ name: user.name, email: user.email }} />
-      <main className="flex-1 overflow-hidden">{children}</main>
-    </div>
+    <DashboardShell user={{ name: user.name, email: user.email }}>
+      {children}
+    </DashboardShell>
   );
 }

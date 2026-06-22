@@ -147,15 +147,15 @@ export default function DocumentsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background/80 px-8 py-5 backdrop-blur">
-        <h1 className="text-2xl font-bold tracking-tight">Documents</h1>
+      <header className="sticky top-0 z-10 border-b bg-background/80 px-4 py-5 backdrop-blur sm:px-8">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Documents</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Upload PDFs, text, or Markdown — one or many at once. We chunk, embed, and store
           them in your private vector store.
         </p>
       </header>
 
-      <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-8 py-7">
+      <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-7">
         {/* Dropzone */}
         <div
           onDragOver={(e) => {
